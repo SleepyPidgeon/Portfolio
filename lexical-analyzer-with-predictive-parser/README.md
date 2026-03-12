@@ -1,0 +1,2 @@
+A lexical analyzer and predicitive parser written in Python.
+Program takes a .txt file and ensures the data written in the txt file matches the rules for a programming language that are established and then parses the information and displays the outputs for the code contained in the txt files.
