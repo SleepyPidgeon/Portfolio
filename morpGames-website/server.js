@@ -30,7 +30,8 @@ app.use(bodyParser.json());
 
 // Session middleware
 app.use(session({
-    secret: '2xRc@1#Y8$zM%3P!HfL7&Z9*KQxT@4$',
+    //Secret here is a placeholder
+    secret: placeholder,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -40,8 +41,8 @@ app.use(session({
     },
 }));
 
-// MongoDB Connection
-mongoose.connect('mongodb+srv://lapreesam:oIGGn21tpjVjBMW9@game1data.sask7.mongodb.net/Game1Data?retryWrites=true&w=majority', {
+// MongoDB Connection, the connection is a placeholder
+mongoose.connect('mongoserverhere', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
