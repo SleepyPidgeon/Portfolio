@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morphou</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-image: url('../img/spacebackground.webp'); /* Use your preferred background */
+            background-size: cover;
+            background-position: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 960px; /* Default maximum width */
+            height: calc(960px * 9 / 16); /* Default 16:9 aspect ratio */
+            border: 5px solid white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid white;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .back-button:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+            color: black;
+        }
+
+        h1 {
+            margin: 20px 0;
+            text-align: center;
+            font-size: 36px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+        }
+
+        .resize-buttons {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .resize-buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .resize-buttons button:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <a href="../../Main.html" class="back-button">Back to Home</a>
+    <h1>Play Morphou</h1>
+
+    <div class="resize-buttons">
+        <button id="increaseSize">Increase Size</button>
+        <button id="decreaseSize">Decrease Size</button>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <iframe 
+            src="https://html-classic.itch.zone/html/12186420/web/index.html" 
+            allowfullscreen>
+        </iframe>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const increaseSizeButton = document.getElementById('increaseSize');
+        const decreaseSizeButton = document.getElementById('decreaseSize');
+
+        let currentWidth = 960; // Default width
+        const aspectRatio = 16 / 9; // 16:9 aspect ratio
+
+        increaseSizeButton.addEventListener('click', () => {
+            currentWidth += 100; // Increase width by 100px
+            updateGameContainerSize();
+        });
+
+        decreaseSizeButton.addEventListener('click', () => {
+            if (currentWidth > 300) { // Minimum width of 300px
+                currentWidth -= 100; // Decrease width by 100px
+                updateGameContainerSize();
+            }
+        });
+
+        function updateGameContainerSize() {
+            gameContainer.style.maxWidth = `${currentWidth}px`;
+            gameContainer.style.height = `${currentWidth / aspectRatio}px`;
+        }
+    </script>
+</body>
+</html>

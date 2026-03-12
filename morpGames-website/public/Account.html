@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account - Morp Games</title>
+    <link rel="stylesheet" href="titleStyles.css">
+    <style>
+        .account-container {
+            background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent background for contrast */
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 255, 153, 0.3); /* Neon glow effect */
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            margin: 100px auto; /* Center the container vertically */
+        }
+        .account-info {
+            color: #00FF99;
+            font-size: 20px;
+            margin: 20px 0;
+        }
+        .account-info span {
+            color: #FF66CC; /* Neon pink for highlighted text */
+        }
+        .gold-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gold-section img {
+            width: 24px;
+            height: 24px;
+            margin-left: 10px; /* Space between gold value and coin image */
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .button-group button {
+            background-color: #FF66CC;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-family: 'Press Start 2P', sans-serif; /* Retro-style font */
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 5px #00FF99; /* Glow effect */
+        }
+        .button-group button:hover {
+            background-color: #FF3399;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #FF66CC, 0 0 10px #FF0000; /* Enhanced glow effect */
+        }
+        .logout-btn {
+            background-color: #FF0000; /* Bright red for the logout button */
+            color: #fff;
+        }
+        .logout-btn:hover {
+            background-color: #CC0000; /* Slightly darker red on hover */
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <button class="signup-login-btn" onclick="window.location.href='Main.html'">Main Menu</button>
+    </div>
+
+    <!-- Account Container -->
+    <div class="account-container">
+        <!-- Site Title -->
+        <h1>Account Details</h1>
+
+        <!-- User Account Information -->
+        <div class="account-info">
+            <p>Username: <span id="username">Loading...</span></p>
+            <p>Email: <span id="email">Loading...</span></p>
+            <p class="gold-section">
+                Gold: <span id="gold">Loading...</span>
+                <img src="img/gold.png" alt="Coin">
+            </p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+            <button class="logout-btn" id="logout-button">Logout</button>
+            <button onclick="window.location.href='ChangePassword.html'">Change Password</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Fetch account details from the backend
+                const response = await fetch('http://localhost:3000/account', {
+                    credentials: 'include' // Include cookies to use session
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Populate account details
+                    document.getElementById('username').textContent = data.username || 'N/A';
+                    document.getElementById('email').textContent = data.email || 'N/A';
+                    document.getElementById('gold').textContent = data.gold || '0';
+                } else {
+                    console.error('Failed to fetch account details:', response.statusText);
+                    alert('Failed to load account details. Please log in.');
+                    window.location.href = 'Login.html'; // Redirect to login if unauthorized
+                }
+            } catch (error) {
+                console.error('Error fetching account details:', error);
+                alert('Error loading account details.');
+                window.location.href = 'Login.html'; // Redirect to login in case of an error
+            }
+        });
+
+        // Logout button functionality
+        document.getElementById('logout-button').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:3000/logout', {
+                    method: 'POST',
+                    credentials: 'include', // Include cookies to clear the session
+                });
+
+                if (response.ok) {
+                    alert('Logged out successfully!');
+                    window.location.href = 'Login.html'; // Redirect to login page
+                } else {
+                    console.error('Failed to log out:', response.statusText);
+                    alert('Failed to log out.');
+                }
+            } catch (error) {
+                console.error('Error during logout:', error);
+                alert('An error occurred while logging out.');
+            }
+        });
+    </script>
+</body>
+</html>

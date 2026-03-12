@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walking Morps Game</title>
+    <link rel="stylesheet" href="titleStyles.css">
+</head>
+<body>
+
+<!-- Top Bar with Signup/Login -->
+<div class="top-bar">
+    <span id="user-greeting">Hello Guest!</span>
+    <div id="button-container">
+        <a href="Login.html" id="login-signup-link">
+            <button class="signup-login-btn">Signup/Login</button>
+        </a>
+    </div>
+</div>
+
+
+<script src="shared.js"></script>
+
+
+<!-- Game Section -->
+<div class="game-container">
+    <h1>MORP GAMES</h1>
+
+    <!-- Morp Info -->
+    <div class="morp-info">
+        <span class="arrow">This is a Morp &rarr;</span>
+        <img src="pictures/Morp_2.png" alt="Morp">
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" width="1200" height="500"></canvas>
+</div>
+
+<!-------------------------------------------------------- More Games Section -------------------------------------------------------->
+
+<div class="more-games-container">
+    <h2>Games</h2>
+</div>
+
+<div class="more-games-background">
+    <div class="game-list">
+        <!-- New Game: Morp Rouge -->
+        <div class="game-item">
+            <a href="MorpRouge/build/MorpRougePage.html">
+                <div class="image-container">
+                    <img src="img/title.png" alt="Morp Rouge">
+                </div>
+                <p>Morp Rouge</p>
+            </a>
+        </div>
+        <!-- Game: Morphou  -->
+        <div class="game-item">
+            <a href="morphou/build/morphoupage.html">
+                <div class="image-container">
+                    <img src="img/morphou.png" alt="Morphou">
+                </div>
+                <p>Morphou</p>
+            </a>
+        </div>
+        <!-- Game: Sudoku -->
+        <div class="game-item">
+            <a href="Sudoku/build/Sudoku.html">
+                <div class="image-container">
+                    <img src="img/sudoku.png" alt="Sudoku">
+                </div>
+                <p>Sudoku</p>
+            </a>
+        </div>
+        <!-- Game: Sliding Tile Game -->
+        <div class="game-item">
+            <a href="Sliding%20Tile%20Web/STG%20Page.html">
+                <div class="image-container">
+                    <img src="img/slidepuzzle.png" alt="Sliding Tile Game">
+                </div>
+                <p>Sliding Tile Game</p>
+            </a>
+        </div> <!-- Close game-item div -->
+    </div> <!-- Close game-list div -->
+</div> <!-- Close more-games-background div -->
+
+<!-------------------------------------------------------- Forum Section -------------------------------------------------------->
+<section class="forum-section">
+    <h2>Forums</h2>
+    <div class="forum-buttons">
+        <button class="forum-btn">Chat Forum</button>
+        <button class="forum-btn">Score Forum</button>
+    </div>
+</section>
+
+
+
+
+<script> //----------------------------------------------------------------- Banner Script -----------------------------------------------------------------
+    // Disable double-click text selection
+    document.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+    });
+    
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Global variables
+    const windowWidth = canvas.width;
+    const windowHeight = canvas.height;
+    
+    let morps = [];
+    let score = 0;
+    let scoreVisible = false;
+    let globalSpeedModifier = 0.5;
+    let animationDelay = 0;
+    const animationDelayThreshold = 10;
+    
+    let maxMorps = 5; // Set the initial maximum number of Morps allowed on the screen
+    
+    // Load images
+    const bannerImage = new Image();
+    bannerImage.src = 'Pictures/MoonBanner.png';
+    const morpImage = new Image();
+    morpImage.src = 'Pictures/Morp_2.png';
+    const morpWalkImage = new Image();
+    morpWalkImage.src = 'Pictures/MorpWalk.png';
+    
+    // Class to represent a Morp
+// Class to represent a Morp
+class Morp {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 75; // Original Morp width
+        this.height = 100; // Original Morp height
+        this.currentImage = morpImage;
+        this.animationToggle = true;
+        this.falling = false;
+        this.dodging = false;
+        this.xSpeed = 2 * globalSpeedModifier;
+        this.fallSpeedX = 0;
+        this.fallSpeedY = 0;
+        this.gravity = 1.2;
+        this.animationFrameCounter = 0;
+    }
+
+    update() {
+        this.xSpeed = 2 * globalSpeedModifier;
+
+        if (!this.falling && !this.dodging) {
+            if (this.animationFrameCounter >= animationDelayThreshold) {
+                this.currentImage = this.animationToggle ? morpWalkImage : morpImage;
+                this.animationToggle = !this.animationToggle;
+                this.animationFrameCounter = 0;
+            } else {
+                this.animationFrameCounter++;
+            }
+
+            this.x += this.xSpeed;
+            if (this.x > windowWidth) {
+                this.x = -this.width;
+            }
+        }
+
+        if (this.dodging) {
+            this.x += Math.random() < 0.5 ? -100 : 100;
+            this.dodging = false;
+        }
+
+        if (this.falling) {
+            this.x += this.fallSpeedX;
+            this.y += this.fallSpeedY;
+            this.fallSpeedY += this.gravity;
+
+            if (this.y > windowHeight) {
+                this.y = windowHeight;
+                this.fallSpeedY = 0;
+                this.fallSpeedX = 0;
+
+                // Remove the Morp after it falls off the screen
+                const index = morps.indexOf(this);
+                if (index > -1) {
+                    morps.splice(index, 1);
+                }
+            }
+        }
+    }
+    
+        draw() {
+            ctx.drawImage(this.currentImage, this.x, this.y, this.width, this.height);
+        }
+    
+        checkCollision(pos) {
+            // Increase the clickable area slightly (padding of 10px on each side)
+            const padding = 10;
+            return (
+                pos.x >= this.x - padding &&
+                pos.x <= this.x + this.width + padding &&
+                pos.y >= this.y - padding &&
+                pos.y <= this.y + this.height + padding
+            );
+        }
+    
+        flick(flickStrength) {
+            this.falling = true;
+            this.fallSpeedY = -20;
+            this.fallSpeedX = flickStrength * 1.5;
+        }
+    
+        dodge() {
+            this.dodging = true;
+        }
+    }
+    
+    // Function to randomly add a Morp from the left
+    function addMorp() {
+        const y = 300;
+        if (morps.length < maxMorps) {  // Only add if fewer than maxMorps exist
+            morps.push(new Morp(-75, y));
+        }
+    }
+    
+    // Event listeners for flicking
+    let mouseStartPos = null;
+    canvas.addEventListener('mousedown', (event) => {
+        mouseStartPos = { x: event.clientX - canvas.offsetLeft, y: event.clientY - canvas.offsetTop };
+    });
+    
+    canvas.addEventListener('mouseup', (event) => {
+        const mouseEndPos = { x: event.clientX - canvas.offsetLeft, y: event.clientY - canvas.offsetTop };
+    
+        if (mouseStartPos) {
+            const flickStrength = (mouseEndPos.x - mouseStartPos.x) / 5;
+    
+            morps.forEach(morp => {
+                if (morp.checkCollision(mouseStartPos) && !morp.falling) {
+                    if (Math.random() < 0.3) {
+                        morp.dodge();
+                    } else {
+                        morp.flick(flickStrength);
+    
+                        if (!scoreVisible) {
+                            scoreVisible = true;
+                        }
+                        score++;
+                        globalSpeedModifier += 0.1;
+    
+                        // Increase maxMorps limit as score increases
+                        if (score % 5 === 0) { // Increase Morps after every 5 points
+                            maxMorps++;
+                        }
+    
+                        if (Math.random() < 0.5) {
+                            addMorp();
+                        }
+                    }
+                }
+            });
+        }
+    
+        mouseStartPos = null;
+    });
+    
+    // Timer for random Morp spawning
+    let spawnTimer = Math.floor(Math.random() * 500) + 150;
+    
+    // Main game loop
+    function gameLoop() {
+        ctx.clearRect(0, 0, windowWidth, windowHeight);
+    
+        // Draw the banner
+        ctx.drawImage(bannerImage, 0, 0, windowWidth, windowHeight);
+    
+        // Handle Morp spawning
+        if (morps.length < maxMorps) { // Ensure at least one Morp spawns if none exist
+            if (spawnTimer <= 0) {
+                addMorp();
+                spawnTimer = Math.floor(Math.random() * 300) + 50;
+            } else {
+                spawnTimer--;
+            }
+        }
+    
+        // Update and draw Morps
+        morps.forEach(morp => morp.update());
+        morps.forEach(morp => morp.draw());
+    
+        // Display the score
+        if (scoreVisible) {
+            ctx.fillStyle = 'white';
+            ctx.font = '36px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 30);
+        }
+    
+        requestAnimationFrame(gameLoop);
+    }
+    
+    // Start the game loop once the banner is loaded
+    bannerImage.onload = () => {
+        morps.push(new Morp(-75, 300));
+        gameLoop();
+    };
+    
+    </script>
+
+    <script>
+        async function updateUIForUser() {
+            try {
+                const response = await fetch('http://localhost:3000/user', {
+                    credentials: 'include', // Include cookies for session
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const userGreeting = document.getElementById('user-greeting');
+                    const buttonContainer = document.getElementById('button-container');
+
+                    // Update greeting and replace button
+                    userGreeting.textContent = `Hello ${data.username || 'Guest'}!`;
+                    buttonContainer.innerHTML = `
+                        <a href="Account.html">
+                            <button class="signup-login-btn">Account</button>
+                        </a>
+                    `;
+                } else {
+                    console.error('Failed to fetch user data. Defaulting to guest.');
+                }
+            } catch (err) {
+                console.error('Error fetching user data:', err);
+            }
+        }
+
+        // Call the function after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', updateUIForUser);
+    </script>
+
+</body>
+</html>
