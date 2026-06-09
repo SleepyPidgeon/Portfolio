@@ -4,45 +4,48 @@ import sqlite3
 import time
 from config import DB_NAME
 
-st.set_page_config(page_title="Flight Control Analytics", layout="wide")
-st.title("Flight Path Telemetry Analytics")
+st.set_page_config(page_title="Commercial Air Traffic Analytics", layout="wide")
+st.title("Airspace Fleet Telemetry Center")
 
-# 1. Read Data from the DB (Runs cleanly once per refresh)
+# Fetch all available data from the database
 try:
     conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM telemetry ORDER BY timestamp DESC LIMIT 50", conn)
+    df_global = pd.read_sql_query("SELECT * FROM telemetry ORDER BY timestamp DESC", conn)
     conn.close()
 except sqlite3.OperationalError:
-    # Fallback if database file is momentarily locked by the mock generator
-    df = pd.DataFrame()
+    df_global = pd.DataFrame()
 
-# 2. Check if data exists and render layout objects exactly once
-if not df.empty:
+if not df_global.empty:
+    # 1. Interactive Fleet Selection Tool
+    unique_flights = df_global['flight_id'].unique()
+    selected_flight = st.sidebar.selectbox("Select Target Aircraft Monitor", unique_flights)
+
+    # Filter data specifically targeting our dropdown choice
+    df = df_global[df_global['flight_id'] == selected_flight].head(50)
     latest = df.iloc[0]
 
-    # Checks for Anomalies immediately
+    # 2. Safety Diagnostics Warning UI
     if latest['anomaly_detected'] == 1:
-        st.error(f"CRITICAL WARNING: Flight {latest['flight_id']} is experiencing anomalous telemetry!")
+        st.error(f"CRITICAL SYSTEM RADAR ALARM: {selected_flight} is registering anomalies!")
     else:
-        st.success(f"Flight {latest['flight_id']} Systems Stable")
+        st.success(f"Flight Tracker Diagnostic: {selected_flight} Operational Performance Stable")
 
-    # Metrics display (Declared cleanly outside of an infinite loop)
+    # 3. Dynamic Real-Time Key Performance Indicators (KPIs)
     col1, col2, col3 = st.columns(3)
-    col1.metric("Current Altitude", f"{latest['altitude']} ft")
-    col2.metric("Velocity", f"{round(latest['velocity'], 1)} kts")
-    col3.metric("Heading", f"{int(latest['heading'])}°")
+    col1.metric("Live Selected Altitude", f"{int(latest['altitude'])} ft")
+    col2.metric("Ground Track Velocity", f"{round(latest['velocity'], 1)} kts")
+    col3.metric("Magnetic Heading Vector", f"{int(latest['heading'])}°")
 
-    # Historical Charts
-    st.subheader("Altitude History (Last 50 ticks)")
+    # 4. Flight Performance Trend Visualizations
+    st.subheader(f"Altitude Profile History: {selected_flight}")
     st.line_chart(df[::-1].set_index('timestamp')['altitude'])
 
-    st.subheader("Velocity History")
+    st.subheader(f"Velocity Profile History: {selected_flight}")
     st.line_chart(df[::-1].set_index('timestamp')['velocity'])
 
 else:
-    st.info("Waiting for telemetry data stream to start...")
+    st.info("System initializing. Waiting for the Database Logger node to capture telemetry packets...")
 
-# 3. Streamlit's native approach to live refreshing:
-# Pause for 1 second, then trigger a clean script rerun from the top
+# Refresh control loops every 1 second
 time.sleep(1)
 st.rerun()

@@ -1,14 +1,14 @@
 import pygame
-import sqlite3
 import math
 import sys
-from config import DB_NAME
+import json
+import paho.mqtt.client as mqtt
 
 #Pygame initialization, window size
 pygame.init()
 width, height = 600, 600
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Flight Radar")
+pygame.display.set_caption("Flight Radar Tracker")
 clock = pygame.time.Clock()
 
 #Colors for radar (RGB)
@@ -17,23 +17,49 @@ radar_green = (0, 200, 0)
 critical_red = (255, 0, 0)
 white = (255, 255, 255)
 
-#Starting position of plane
-plane_x, plane_y = width//2, height//2
+#Radar should track multiple planes at once
+#Format: {flight_id: {x, y, heading, velocity, altitude, anomaly_detected}}
+air_traffic = {}
 
-
-def get_latest_telemetry():
-    """Fetch the most recent row from the database."""
+def on_message(client, userdata, msg):
+    """Callback is executed every time a flight publishes telemetry data."""
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT heading, velocity, anomaly_detected, altitude from telemetry ORDER BY timestamp DESC LIMIT 1")
-        row = cursor.fetchone()
-        conn.close()
-        return row
-    except sqlite3.OperationalError:
-        #This is to avoid a crash if the DB is locked by the generator
-        return None
-    
+        payload = json.loads(msg.payload.decode())
+        flight_id = payload["flight_id"]
+
+        #A new flight entering the airspace will have its position initialized in the center for now
+        if flight_id not in air_traffic:
+            air_traffic[flight_id] = {
+                "x": float(width // 2),
+                "y": float(height // 2),
+                "heading": payload["heading"],
+                "velocity": payload["velocity"],
+                "altitude": payload["altitude"],
+                "anomaly_detected": payload["anomaly_detected"]
+            }
+
+        else:
+            #Update flight positioning/info that occurs in game loop
+            air_traffic[flight_id]["heading"] = payload["heading"]
+            air_traffic[flight_id]["velocity"] = payload["velocity"]
+            air_traffic[flight_id]["altitude"] = payload["altitude"]
+            air_traffic[flight_id]["anomaly_detected"] = payload["anomaly_detected"]
+
+    except Exception as e:
+        print(f"Error parsing incoming telemetry data: {e}")
+
+#MQTT Client Network Thread
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
+MQTT_TOPIC = "aviation/telemetry"
+
+mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+mqtt_client.on_message = on_message
+mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+mqtt_client.subscribe(MQTT_TOPIC)
+mqtt_client.loop_start()
+
+
 running = True
 flash_state = False
 flash_timer = 0
@@ -41,62 +67,61 @@ flash_timer = 0
 while running:
     screen.fill(background)
 
-    #Handle window close
+    #Handles window close
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-    #Rings to make the radar look cool
+    
+    #Drawing standard radar rings
     for radius in [100, 200, 280]:
         pygame.draw.circle(screen, (0,50,0), (width//2, height//2), radius, 1)
 
-    data = get_latest_telemetry()
+        global_anomaly_active = False
 
-    if data:
-        heading, velocity, anomaly, altitude = data
+        #Draws and updates every flight in the tracking database
+    for flight_id, aircraft in air_traffic.items():
+        #Physics udpate based on vector geometry
+        rad = math.radians(aircraft["heading"] - 90)
+        speed_factor = aircraft["velocity"] * 0.005
 
-        #Using data we update the position and speed of the plane
-        # Compass heading is converted to radians for trig functions
-        rad = math.radians(heading-90)
-        speed_factor = velocity *0.005  #This is scaled down for the screen display
+        aircraft["x"] += speed_factor * math.cos(rad)
+        aircraft["y"] += speed_factor * math.sin(rad)
 
-        plane_x += speed_factor * math.cos(rad)
-        plane_y += speed_factor * math.sin(rad)
+        #Screen wrap-around
+        aircraft["x"] %= width
+        aircraft["y"] %= height
 
-        #This keeps the plane on screen, meaning the edges wrap
-        plane_x %= width
-        plane_y %= height
-
-        #Anomaly visuals
-        if anomaly == 1:
-            #Red flash effect intervals in ms
+        #Determine target color
+        if aircraft["anomaly_detected"] ==1:
+            global_anomaly_active = True
             if pygame.time.get_ticks() - flash_timer > 200:
                 flash_state = not flash_state
                 flash_timer = pygame.time.get_ticks()
-
             color = critical_red if flash_state else white
-            #Warning Box
-            pygame.draw.rect(screen, critical_red, (10,10, width-20, height - 20), 4)
-
-            font = pygame.font.Font(None, 36)
-            text = font.render("ANOMALY DETECTED! PULL UP! PULL UP!", True, critical_red)
-            screen.blit(text, (width//2 - 190, 30))
-
         else:
             color = radar_green
 
-        #Plane blip
-        pygame.draw.circle(screen, color, (int(plane_x), int(plane_y)), 8)
+        #Render plane position dot
+        pos = (int(aircraft["x"]), int(aircraft["y"]))
+        pygame.draw.circle(screen, color, pos, 8)
 
-        #Text readouts on radar screen
-        font = pygame.font.Font(None, 24)
-        alt_txt = font.render(f"ALT: {altitude} FT", True, color)
-        hdg_txt = font.render(f"HDG: {int(heading)}°", True, color)
-        screen.blit(alt_txt, (20, height-50))
-        screen.blit(hdg_txt, (20, height -30))
+        #Plane Tag text next to blip
+        font_tag = pygame.font.Font(None, 18)
+        tag_txt = font_tag.render(f"{flight_id} ({int(aircraft['altitude'])}ft)", True, color)
+        screen.blit(tag_txt, (pos[0] + 12, pos[1] - 6))
+
+    #Master Airspace Alarm Notification UI
+    if global_anomaly_active:
+        pygame.draw.rect(screen, critical_red, (10, 10, width - 20, height - 20), 4)
+        font = pygame.font.Font(None, 36)
+        text = font.render("CRITICAL AIRSPACE ANOMALY ALERT", True, critical_red)
+        screen.blit(text, (width//2 - 210, 30))
 
     pygame.display.flip()
-    clock.tick(30) #30 FPS
+    clock.tick(30) #30 FPS Execution
 
+#Shutdown protocol
 pygame.quit()
+mqtt_client.loop_stop()
+mqtt_client.disconnect()
 sys.exit()
